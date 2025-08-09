@@ -337,13 +337,68 @@ const forgotPassword = asyncHandler(async (req, res) => {
     // Construct reset URL from the request's Origin header for dynamic environments.
     const frontendUrl = req.get('origin') || process.env.FRONTEND_URL || 'https://imnovelteam.vercel.app';
     const resetURL = `${frontendUrl}/?resetToken=${resetToken}`;
-    const message = `Forgot your password? Click the link to reset it: ${resetURL}\nIf you didn't forget your password, please ignore this email! This link is valid for 10 minutes.`;
+    
+    // Plain text version for email clients that don't support HTML
+    const textMessage = `Forgot your password? Click the link to reset it: ${resetURL}\nIf you didn't forget your password, please ignore this email! This link is valid for 10 minutes.`;
+
+    // HTML version of the email
+    const htmlMessage = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Password Reset</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f4f4f4; color: #333;">
+        <table align="center" border="0" cellpadding="0" cellspacing="0" width="600" style="border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+            <tr>
+                <td align="center" style="padding: 40px 0 30px 0;">
+                    <img src="https://i.imgur.com/rNTOOMm.jpeg" alt="IMnovel Team Banner" width="100%" style="max-width: 500px; display: block; border-radius: 8px;" />
+                </td>
+            </tr>
+            <tr>
+                <td style="padding: 0 30px 20px 30px;">
+                    <h1 style="font-size: 24px; margin: 0; text-align: center; color: #1e293b;">Forgot Your Password?</h1>
+                </td>
+            </tr>
+            <tr>
+                <td style="padding: 0 30px 20px 30px; font-size: 16px; line-height: 1.5; text-align: center; color: #475569;">
+                    <p>We received a request to reset your password for your IMnovel Team account. You can reset your password by clicking the button below.</p>
+                </td>
+            </tr>
+            <tr>
+                <td style="padding: 20px 30px 40px 30px;" align="center">
+                    <table border="0" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+                        <tr>
+                            <td align="center" bgcolor="#7c3aed" style="border-radius: 25px;">
+                                <a href="${resetURL}" target="_blank" style="font-size: 16px; font-weight: bold; font-family: sans-serif; text-decoration: none; color: #ffffff; border-radius: 25px; padding: 15px 25px; border: 1px solid #7c3aed; display: inline-block;">Reset Your Password</a>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr>
+                <td style="padding: 0 30px 20px 30px; font-size: 14px; line-height: 1.5; text-align: center; color: #64748b;">
+                    <p>This link is valid for 10 minutes. If you did not request a password reset, please ignore this email.</p>
+                </td>
+            </tr>
+             <tr>
+                <td bgcolor="#f1f5f9" style="padding: 30px 30px 30px 30px; text-align: center; font-size: 12px; color: #64748b;">
+                    <p>&copy; ${new Date().getFullYear()} IMnovel Team. All rights reserved.</p>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+    `;
 
     try {
         await sendEmail({
             email: user.email,
             subject: 'IMnovel Team - Your password reset token (valid for 10 min)',
-            text: message,
+            text: textMessage,
+            html: htmlMessage,
         });
 
         res.status(200).json({ message: 'Token sent to email!' });
