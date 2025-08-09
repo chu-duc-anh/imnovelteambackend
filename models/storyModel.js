@@ -11,7 +11,6 @@ const contentBlockSchema = mongoose.Schema({
         virtuals: true,
         transform(doc, ret) {
             ret.id = ret._id;
-            delete ret._id;
         }
     }
 });
@@ -25,7 +24,6 @@ const chapterSchema = mongoose.Schema({
         virtuals: true,
         transform(doc, ret) {
             ret.id = ret._id;
-            delete ret._id;
         }
     }
 });
@@ -39,7 +37,6 @@ const volumeSchema = mongoose.Schema({
         virtuals: true,
         transform(doc, ret) {
             ret.id = ret._id;
-            delete ret._id;
         }
     }
 });
@@ -76,7 +73,6 @@ const storySchema = mongoose.Schema({
         virtuals: true,
         transform(doc, ret) {
             ret.id = ret._id;
-            delete ret._id;
             delete ret.__v;
             // Ensure bookmarks and likedBy are arrays of strings for the frontend
             if (ret.bookmarks) {
