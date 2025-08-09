@@ -3,6 +3,8 @@ import User from '../models/userModel.js';
 import Story from '../models/storyModel.js';
 import Comment from '../models/commentModel.js';
 import generateToken from '../utils/generateToken.js';
+import crypto from 'crypto';
+import sendEmail from '../utils/sendEmail.js';
 
 // @desc    Register a new user
 // @route   POST /api/users/register
@@ -104,7 +106,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
 const updateUserPassword = asyncHandler(async (req, res) => {
     const { oldPassword, newPassword } = req.body;
     const user = await User.findById(req.user.id).select('+passwordHash');
-
+    
     if (user && await user.matchPassword(oldPassword)) {
         user.passwordHash = newPassword;
         await user.save();
@@ -297,13 +299,13 @@ const getLeaderboard = asyncHandler(async (req, res) => {
             scores.get(authorId).likes += comment.likes.length;
         }
     });
-
+    
     // Calculate final weighted score
     const usersWithScores = users.map(user => {
         const userScoreData = scores.get(user.id.toString()) || { comments: 0, likes: 0, stories: 0 };
         // Weighted score: Story created = 10 pts, Like received = 2 pts, Comment made = 1 pt
         const totalScore = (userScoreData.stories * 10) + (userScoreData.likes * 2) + (userScoreData.comments * 1);
-
+        
         return {
             ...user.toJSON(),
             totalScore,
@@ -317,6 +319,76 @@ const getLeaderboard = asyncHandler(async (req, res) => {
       .slice(0, 10);
 
     res.json(topUsers);
+});
+
+// @desc    Forgot password
+// @route   POST /api/users/forgotpassword
+// @access  Public
+const forgotPassword = asyncHandler(async (req, res) => {
+    const user = await User.findOne({ email: req.body.email });
+    if (!user) {
+        // To prevent email enumeration, we send a success response even if the user doesn't exist.
+        return res.status(200).json({ message: 'If an account with that email exists, a reset link has been sent.' });
+    }
+
+    const resetToken = user.createPasswordResetToken();
+    await user.save({ validateBeforeSave: false });
+
+    // The frontend URL should come from an env var, but this works for now.
+    const resetURL = `https://imnovelteam.vercel.app/?resetToken=${resetToken}`;
+    const message = `Forgot your password? Click the link to reset it: ${resetURL}\nIf you didn't forget your password, please ignore this email! This link is valid for 10 minutes.`;
+
+    try {
+        await sendEmail({
+            email: user.email,
+            subject: 'IMnovel Team - Your password reset token (valid for 10 min)',
+            text: message,
+        });
+
+        res.status(200).json({ message: 'Token sent to email!' });
+    } catch (err) {
+        user.passwordResetToken = undefined;
+        user.passwordResetExpires = undefined;
+        await user.save({ validateBeforeSave: false });
+        console.error('EMAIL ERROR', err);
+        res.status(500);
+        throw new Error('There was an error sending the email. Try again later.');
+    }
+});
+
+// @desc    Reset password
+// @route   PUT /api/users/resetpassword/:token
+// @access  Public
+const resetPassword = asyncHandler(async (req, res) => {
+    const hashedToken = crypto
+        .createHash('sha256')
+        .update(req.params.token)
+        .digest('hex');
+
+    const user = await User.findOne({
+        passwordResetToken: hashedToken,
+        passwordResetExpires: { $gt: Date.now() }
+    }).select('+passwordHash');
+
+    if (!user) {
+        res.status(400);
+        throw new Error('Token is invalid or has expired.');
+    }
+    
+    if (!req.body.password || req.body.password.length < 6) {
+        res.status(400);
+        throw new Error('Please provide a password with at least 6 characters.');
+    }
+
+    user.passwordHash = req.body.password;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save();
+
+    res.json({
+        user: user.toJSON(),
+        token: generateToken(user._id),
+    });
 });
 
 
@@ -335,4 +407,6 @@ export {
     leaveAllyTeam,
     getPublicUsers,
     getLeaderboard,
+    forgotPassword,
+    resetPassword,
 };
