@@ -1,7 +1,5 @@
 
 
-
-
 import asyncHandler from 'express-async-handler';
 import Story from '../models/storyModel.js';
 import Comment from '../models/commentModel.js';
@@ -14,13 +12,84 @@ const formatStoryResponse = async (story) => {
 };
 
 
-// @desc    Fetch all stories
+// @desc    Fetch all stories with pagination and filtering
 // @route   GET /api/stories
 // @access  Public
 const getStories = asyncHandler(async (req, res) => {
-    const stories = await Story.find({}).sort({ lastUpdated: -1 }).populate('creatorId', 'id username');
+    const pageSize = parseInt(req.query.limit, 10) || 8;
+    const page = parseInt(req.query.page, 10) || 1;
+
+    const { status, genresInclude, genresExclude, search, creatorId } = req.query;
+
+    const query = {};
+
+    if (search) {
+        const keyword = { $regex: search, $options: 'i' };
+        query.$or = [
+            { title: keyword },
+            { alternativeTitles: keyword }
+        ];
+    }
+
+    if (status && status !== 'all') {
+        query.status = status;
+    }
+
+    if (creatorId) {
+        query.creatorId = creatorId;
+    }
+    
+    const includeArray = genresInclude ? genresInclude.split(',') : [];
+    const excludeArray = genresExclude ? genresExclude.split(',') : [];
+
+    if (includeArray.length > 0) {
+        query.genres = { $all: includeArray };
+    }
+    if (excludeArray.length > 0) {
+        if (query.genres) {
+             query.genres.$nin = excludeArray;
+        } else {
+             query.genres = { $nin: excludeArray };
+        }
+    }
+
+    const count = await Story.countDocuments(query);
+    const stories = await Story.find(query)
+        .limit(pageSize)
+        .skip(pageSize * (page - 1))
+        .sort({ lastUpdated: -1 })
+        .populate('creatorId', 'id username');
+
+    res.json({
+        stories: stories.map(s => s.toJSON()),
+        page,
+        pages: Math.ceil(count / pageSize),
+        total: count,
+    });
+});
+
+// @desc    Get top 10 hot stories
+// @route   GET /api/stories/hot
+// @access  Public
+const getHotStories = asyncHandler(async (req, res) => {
+    const stories = await Story.find({ hot: true })
+        .limit(10)
+        .sort({ lastUpdated: -1 })
+        .populate('creatorId', 'id username');
     res.json(stories.map(s => s.toJSON()));
 });
+
+// @desc    Get top 10 recently updated stories
+// @route   GET /api/stories/recent
+// @access  Public
+const getRecentStories = asyncHandler(async (req, res) => {
+    const stories = await Story.find({})
+        .limit(10)
+        .sort({ lastUpdated: -1 })
+        .populate('creatorId', 'id username');
+    res.json(stories.map(s => s.toJSON()));
+});
+
 
 // @desc    Fetch single story
 // @route   GET /api/stories/:id
@@ -41,7 +110,7 @@ const getStoryById = asyncHandler(async (req, res) => {
 // @access  Private/Admin or Contractor
 const createStory = asyncHandler(async (req, res) => {
     const user = req.user;
-
+    
     // Authorization check
     if (user.role !== 'admin' && user.role !== 'contractor') {
         res.status(403);
@@ -49,7 +118,7 @@ const createStory = asyncHandler(async (req, res) => {
     }
 
     const { title, author, translator, coverImageUrl, genres, description, volumes, status, hot, alternativeTitles } = req.body;
-
+    
     const story = new Story({
         creatorId: user._id, // Creator is always the logged-in admin/contractor
         title,
@@ -88,7 +157,7 @@ const updateStory = asyncHandler(async (req, res) => {
              res.status(403);
              throw new Error('User not authorized to update this story');
         }
-
+        
         // If creatorId is missing, only an admin can proceed past the check above.
         if (!story.creatorId && !isAdmin) {
             res.status(500);
@@ -260,7 +329,7 @@ const rateStory = asyncHandler(async (req, res) => {
             // Add new rating
             story.ratings.push({ userId, score });
         }
-
+        
         const updatedStory = await story.save();
         res.json(await formatStoryResponse(updatedStory));
 
@@ -299,6 +368,8 @@ const toggleBookmark = asyncHandler(async (req, res) => {
 
 export {
     getStories,
+    getHotStories,
+    getRecentStories,
     getStoryById,
     createStory,
     updateStory,
