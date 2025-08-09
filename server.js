@@ -8,8 +8,13 @@ import storyRoutes from './routes/storyRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import commentRoutes from './routes/commentRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
-import settingRoutes from './routes/settingRoutes.js';
+// import settingRoutes from './routes/settingRoutes.js'; // Removed to fix module not found error
 import fileRoutes from './routes/fileRoutes.js';
+
+// Import dependencies for inlined setting routes
+import { getSettings, updateSettings } from './controllers/settingController.js';
+import { protect, admin } from './middleware/authMiddleware.js';
+
 
 dotenv.config();
 
@@ -30,8 +35,15 @@ app.use('/api/stories', storyRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/chats', chatRoutes);
-app.use('/api/settings', settingRoutes);
+// app.use('/api/settings', settingRoutes); // Replaced with inlined router
 app.use('/api/files', fileRoutes);
+
+// Inlined Setting Routes
+const settingRouter = express.Router();
+settingRouter.route('/')
+    .get(getSettings)
+    .put(protect, admin, updateSettings);
+app.use('/api/settings', settingRouter);
 
 
 app.use(notFound);
