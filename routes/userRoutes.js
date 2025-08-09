@@ -15,6 +15,8 @@ import {
     leaveAllyTeam,
     getPublicUsers,
     getLeaderboard,
+    forgotPassword,
+    resetPassword,
 } from '../controllers/userController.js';
 import { protect, admin } from '../middleware/authMiddleware.js';
 
@@ -23,6 +25,8 @@ router.get('/public', getPublicUsers);
 router.get('/leaderboard', getLeaderboard);
 router.post('/register', registerUser);
 router.post('/login', loginUser);
+router.post('/forgotpassword', forgotPassword);
+router.put('/resetpassword/:token', resetPassword);
 router.post('/check-username', checkUsername);
 router.post('/check-email', checkEmail);
 
