@@ -334,8 +334,9 @@ const forgotPassword = asyncHandler(async (req, res) => {
     const resetToken = user.createPasswordResetToken();
     await user.save({ validateBeforeSave: false });
 
-    // The frontend URL should come from an env var, but this works for now.
-    const resetURL = `https://imnovelteam.vercel.app/?resetToken=${resetToken}`;
+    // Construct reset URL from environment variable for flexibility
+    const frontendUrl = process.env.FRONTEND_URL || 'https://imnovelteam.vercel.app';
+    const resetURL = `${frontendUrl}/?resetToken=${resetToken}`;
     const message = `Forgot your password? Click the link to reset it: ${resetURL}\nIf you didn't forget your password, please ignore this email! This link is valid for 10 minutes.`;
 
     try {
