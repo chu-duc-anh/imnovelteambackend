@@ -1,6 +1,8 @@
 
+
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 
 const userSchema = mongoose.Schema({
     username: { type: String, required: true, unique: true },
@@ -12,6 +14,8 @@ const userSchema = mongoose.Schema({
     race: { type: String, default: 'Nhân tộc' },
     googleId: { type: String },
     allyOf: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    passwordResetToken: String,
+    passwordResetExpires: Date,
 }, {
     timestamps: true,
     toJSON: {
@@ -28,6 +32,20 @@ const userSchema = mongoose.Schema({
 // Match user entered password to hashed password in database
 userSchema.methods.matchPassword = async function (enteredPassword) {
     return await bcrypt.compare(enteredPassword, this.passwordHash);
+};
+
+userSchema.methods.createPasswordResetToken = function() {
+    const resetToken = crypto.randomBytes(32).toString('hex');
+
+    this.passwordResetToken = crypto
+        .createHash('sha256')
+        .update(resetToken)
+        .digest('hex');
+
+    // Token expires in 10 minutes
+    this.passwordResetExpires = Date.now() + 10 * 60 * 1000;
+
+    return resetToken;
 };
 
 // Encrypt password using bcrypt before saving
