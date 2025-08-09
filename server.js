@@ -91,6 +91,9 @@ const updateSettings = asyncHandler(async (req, res) => {
 
 // --- End of Inlined Logic ---
 
+app.get('/', (req, res) => {
+    res.send('Welcome to the IMnovel Team API. The service is running correctly. Please use the frontend application to interact with the API.');
+});
 
 app.get('/api', (req, res) => {
     res.send('API is running...');
