@@ -4,6 +4,8 @@ import express from 'express';
 const router = express.Router();
 import {
     getStories,
+    getHotStories,
+    getRecentStories,
     getStoryById,
     createStory,
     updateStory,
@@ -16,6 +18,8 @@ import {
 } from '../controllers/storyController.js';
 import { protect, admin } from '../middleware/authMiddleware.js';
 
+router.get('/hot', getHotStories);
+router.get('/recent', getRecentStories);
 router.post('/check-title', protect, checkStoryTitle);
 
 router.route('/')
