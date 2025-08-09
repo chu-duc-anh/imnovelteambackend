@@ -1,3 +1,5 @@
+console.log("--- RUNNING LATEST SERVER.JS (v2) ---"); // Diagnostic log
+
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
