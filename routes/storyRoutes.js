@@ -15,11 +15,13 @@ import {
     toggleStoryLike,
     rateStory,
     toggleBookmark,
+    searchStories,
 } from '../controllers/storyController.js';
 import { protect, admin } from '../middleware/authMiddleware.js';
 
 router.get('/hot', getHotStories);
 router.get('/recent', getRecentStories);
+router.get('/search', searchStories);
 router.post('/check-title', protect, checkStoryTitle);
 
 router.route('/')
