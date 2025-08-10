@@ -110,6 +110,33 @@ const getRecentStories = asyncHandler(async (req, res) => {
     res.json(stories.map(s => s.toJSON()));
 });
 
+// @desc    Quick search for stories by title
+// @route   GET /api/stories/search
+// @access  Public
+const searchStories = asyncHandler(async (req, res) => {
+    const term = req.query.term || '';
+
+    if (term.length < 2) {
+        return res.json([]);
+    }
+
+    const keyword = { $regex: term, $options: 'i' };
+    const query = {
+        $or: [
+            { title: keyword },
+            { alternativeTitles: keyword }
+        ]
+    };
+
+    const stories = await Story.find(query)
+        .limit(10) // Limit results for quick search
+        .sort({ lastUpdated: -1 })
+        .select('title coverImageUrl author translator'); // Select only necessary fields
+
+    // The toJSON virtuals will add the 'id' field
+    res.json(stories.map(s => s.toJSON()));
+});
+
 
 // @desc    Fetch single story
 // @route   GET /api/stories/:id
@@ -425,4 +452,5 @@ export {
     toggleStoryLike,
     rateStory,
     toggleBookmark,
+    searchStories,
 };
