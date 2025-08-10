@@ -4,11 +4,31 @@ import asyncHandler from 'express-async-handler';
 import Story from '../models/storyModel.js';
 import Comment from '../models/commentModel.js';
 import mongoose from 'mongoose';
+import { getGfs } from '../config/db.js';
 
 // Helper to populate story creator and convert to JSON
 const formatStoryResponse = async (story) => {
     const populated = await story.populate('creatorId', 'id username');
     return populated.toJSON();
+};
+
+// Helper to delete a file from GridFS by its filename
+const deleteFileByName = async (filename) => {
+    if (!filename) return;
+    try {
+        const gfs = getGfs();
+        if (!gfs) {
+            console.error('GridFS not initialized. Cannot delete file.');
+            return;
+        }
+        const files = await gfs.find({ filename }).toArray();
+        if (files && files.length > 0) {
+            await gfs.delete(files[0]._id);
+            console.log(`Deleted old file from GridFS: ${filename}`);
+        }
+    } catch (error) {
+        console.error(`Error deleting file ${filename} from GridFS:`, error);
+    }
 };
 
 
@@ -163,6 +183,32 @@ const updateStory = asyncHandler(async (req, res) => {
             res.status(500);
             throw new Error('Story has an invalid owner and cannot be modified.');
         }
+
+        // --- Logic for deleting old files ---
+        const getFilename = (url) => url && typeof url === 'string' && url.startsWith('/api/files/') ? url.split('/').pop() : null;
+
+        // Check main story cover
+        const newCoverUrl = req.body.coverImageUrl;
+        const oldCoverFilename = getFilename(story.coverImageUrl);
+        if (oldCoverFilename && story.coverImageUrl !== newCoverUrl) {
+            await deleteFileByName(oldCoverFilename);
+        }
+
+        // Check volume covers
+        if (req.body.volumes) {
+            const oldVolumesMap = new Map(story.volumes.map(v => [v._id.toString(), v.coverImageUrl]));
+            for (const newVolume of req.body.volumes) {
+                // newVolume.id can be undefined for new volumes, so check it exists
+                if (newVolume.id) {
+                    const oldVolumeCoverUrl = oldVolumesMap.get(newVolume.id.toString());
+                    const oldVolumeCoverFilename = getFilename(oldVolumeCoverUrl);
+                    if (oldVolumeCoverFilename && oldVolumeCoverUrl !== newVolume.coverImageUrl) {
+                        await deleteFileByName(oldVolumeCoverFilename);
+                    }
+                }
+            }
+        }
+        // --- End of file deletion logic ---
 
         story.title = title ?? story.title;
         story.author = author ?? story.author;
