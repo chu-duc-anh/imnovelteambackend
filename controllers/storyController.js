@@ -75,6 +75,7 @@ const getStories = asyncHandler(async (req, res) => {
 
     const count = await Story.countDocuments(query);
     const stories = await Story.find(query)
+        .select('-volumes.chapters.contentBlocks')
         .limit(pageSize)
         .skip(pageSize * (page - 1))
         .sort({ lastUpdated: -1 })
@@ -93,6 +94,7 @@ const getStories = asyncHandler(async (req, res) => {
 // @access  Public
 const getHotStories = asyncHandler(async (req, res) => {
     const stories = await Story.find({ hot: true })
+        .select('-volumes.chapters.contentBlocks')
         .limit(10)
         .sort({ lastUpdated: -1 })
         .populate('creatorId', 'id username');
@@ -104,6 +106,7 @@ const getHotStories = asyncHandler(async (req, res) => {
 // @access  Public
 const getRecentStories = asyncHandler(async (req, res) => {
     const stories = await Story.find({})
+        .select('-volumes.chapters.contentBlocks')
         .limit(10)
         .sort({ lastUpdated: -1 })
         .populate('creatorId', 'id username');
