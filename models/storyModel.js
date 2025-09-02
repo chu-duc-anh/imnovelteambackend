@@ -1,5 +1,6 @@
 
 
+
 import mongoose from 'mongoose';
 
 const contentBlockSchema = mongoose.Schema({
@@ -55,6 +56,7 @@ const storySchema = mongoose.Schema({
     alternativeTitles: { type: [String], default: [] },
     coverImageUrl: { type: String, required: true },
     genres: { type: [String], required: true },
+    country: { type: String },
     description: { type: String, required: true },
     volumes: [volumeSchema],
     status: { type: String, enum: ['Ongoing', 'Completed', 'Dropped'], default: 'Ongoing' },
