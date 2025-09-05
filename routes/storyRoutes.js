@@ -16,12 +16,14 @@ import {
     rateStory,
     toggleBookmark,
     searchStories,
+    getBookmarkedStories,
 } from '../controllers/storyController.js';
 import { protect, admin } from '../middleware/authMiddleware.js';
 
 router.get('/hot', getHotStories);
 router.get('/recent', getRecentStories);
 router.get('/search', searchStories);
+router.get('/me/bookmarks', protect, getBookmarkedStories);
 router.post('/check-title', protect, checkStoryTitle);
 
 router.route('/')
