@@ -1,6 +1,5 @@
 
 
-
 import asyncHandler from 'express-async-handler';
 import Story from '../models/storyModel.js';
 import Comment from '../models/commentModel.js';
@@ -165,7 +164,7 @@ const createStory = asyncHandler(async (req, res) => {
         throw new Error('User not authorized to create stories');
     }
 
-    const { title, author, translator, coverImageUrl, genres, description, volumes, status, hot, alternativeTitles, country } = req.body;
+    const { title, author, translator, coverImageUrl, genres, description, volumes, status, hot, alternativeTitles } = req.body;
     
     const story = new Story({
         creatorId: user._id, // Creator is always the logged-in admin/contractor
@@ -175,7 +174,6 @@ const createStory = asyncHandler(async (req, res) => {
         alternativeTitles,
         coverImageUrl,
         genres,
-        country,
         description,
         volumes,
         status,
@@ -192,7 +190,7 @@ const createStory = asyncHandler(async (req, res) => {
 // @route   PUT /api/stories/:id
 // @access  Private/Admin or Contractor (owner) or Ally
 const updateStory = asyncHandler(async (req, res) => {
-    const { title, author, translator, coverImageUrl, genres, description, volumes, status, hot, rating, alternativeTitles, country } = req.body;
+    const { title, author, translator, coverImageUrl, genres, description, volumes, status, hot, rating, alternativeTitles } = req.body;
 
     const story = await Story.findById(req.params.id);
 
@@ -245,7 +243,6 @@ const updateStory = asyncHandler(async (req, res) => {
         story.alternativeTitles = alternativeTitles ?? story.alternativeTitles;
         story.coverImageUrl = coverImageUrl ?? story.coverImageUrl;
         story.genres = genres ?? story.genres;
-        story.country = country ?? story.country;
         story.description = description ?? story.description;
         story.volumes = volumes ?? story.volumes;
         story.status = status ?? story.status;
@@ -441,6 +438,17 @@ const toggleBookmark = asyncHandler(async (req, res) => {
     }
 });
 
+// @desc    Get stories bookmarked by the current user
+// @route   GET /api/stories/me/bookmarks
+// @access  Private
+const getBookmarkedStories = asyncHandler(async (req, res) => {
+    const stories = await Story.find({ bookmarks: req.user._id })
+        .sort({ lastUpdated: -1 })
+        .populate('creatorId', 'id username');
+
+    res.json(stories.map(s => s.toJSON()));
+});
+
 
 export {
     getStories,
@@ -456,4 +464,5 @@ export {
     rateStory,
     toggleBookmark,
     searchStories,
+    getBookmarkedStories,
 };
